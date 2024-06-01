@@ -1,0 +1,52 @@
+version: '3'
+services:
+
+  odoo:
+    image: odoo:14.0
+    depends_on:
+      - mydb
+    volumes:
+      - ./addons-extra/repo-melax/odepov13:/mnt/extra-addons:rw
+      - ./odoo_conf:/etc/odoo
+    ports:
+      - 8070:8069
+    environment:
+      - HOST=mydb
+      - USER=odoo
+      - PASSWORD=odoo
+    restart: unless-stopped
+
+  mydb:
+    image: postgres:13
+    volumes:
+      - ./postgres.conf:/etc/postgresql/postgresql.conf
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD=odoo
+      - POSTGRES_USER=odoo
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:latest
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./nginx_conf:/etc/nginx/conf.d:rw
+    depends_on:
+      - odoo
+    restart: unless-stopped
+
+# Décommentez et configurez pour utiliser SSL
+#  certbot:
+#    image: certbot/certbot:latest
+#    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+#    volumes:
+#      - ./certbot/conf:/etc/letsencrypt:rw
+#      - ./certbot/logs:/var/log/letsencrypt
+#      - ./certbot/data:/var/www/certbot
+#    restart: unless-stopped
+
